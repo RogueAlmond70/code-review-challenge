@@ -1,0 +1,16 @@
+meta {
+  name: getNotes
+  type: http
+  seq: 1
+}
+
+get {
+  url: http://localhost:8080/notes
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: user1
+  password: 1234
+}

@@ -1,0 +1,22 @@
+meta {
+  name: unarchiveNote
+  type: http
+  seq: 5
+}
+
+patch {
+  url: http://localhost:8080/note/5
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: user1
+  password: 1234
+}
+
+body:json {
+  {
+    "archived": false
+  }
+}

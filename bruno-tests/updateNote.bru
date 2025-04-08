@@ -1,0 +1,23 @@
+meta {
+  name: updateNote
+  type: http
+  seq: 3
+}
+
+patch {
+  url: http://localhost:8080/note/5
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: user1
+  password: 1234
+}
+
+body:json {
+  {
+    "title": "New Tests",
+    "content": "New content"
+  }
+}

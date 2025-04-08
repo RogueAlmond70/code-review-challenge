@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "code-review-challenge-test",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
