@@ -1,11 +1,15 @@
 package services
 
+// Firstly, this code should be in a vendor specific implementation file
+// We shouldn't directly be using this, but rather a DB interface
+
 import (
 	"context"
 	"database/sql"
 	"fmt"
-	_ "github.com/lib/pq"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 const (
@@ -23,10 +27,10 @@ func OpenDB() (*sql.DB, error) {
 
 	db, err := sql.Open("postgres", connectionInfo)
 	if err != nil {
-		return nil, err
+		return nil, err // Errors should be wrapped, and informative. Also logged, and captured with metrics.
 	}
 
-	fmt.Println("setting limits")
+	fmt.Println("setting limits") // Use logger, not print statements
 	db.SetMaxOpenConns(5)
 	db.SetMaxIdleConns(5)
 
