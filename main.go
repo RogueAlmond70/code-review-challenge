@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/RogueAlmond70/code-review-challenge/endpoints"
-	"github.com/RogueAlmond70/code-review-challenge/middleware"
+	"github.com/RogueAlmond70/code-review-challenge/internal/middleware"
 	"github.com/RogueAlmond70/code-review-challenge/services"
 	"github.com/gin-gonic/gin"
 )
@@ -20,6 +20,11 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+
+	// Create instance of userStore to pass in to register and login routes
+	userStore := services.NewUserStore(db)
+	router.POST("/register", endpoints.Register(userStore))
+	router.POST("/login", endpoints.Login(userStore))
 
 	router.GET("/notes", endpoints.GetNotes(db))
 	router.POST("/note", endpoints.CreateNote(db))

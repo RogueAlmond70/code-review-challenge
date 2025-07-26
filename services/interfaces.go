@@ -1,9 +1,10 @@
-package datastore
+package services
 
 import (
 	"context"
 	"time"
 
+	"github.com/RogueAlmond70/code-review-challenge/internal/models"
 	"github.com/RogueAlmond70/code-review-challenge/types"
 )
 
@@ -22,4 +23,9 @@ type Cache interface {
 	Get(ctx context.Context, key string) ([]byte, error)
 	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
 	Delete(ctx context.Context, key string) error
+}
+
+type UserStore interface {
+	CreateUser(ctx context.Context, user *models.User) error
+	GetUserByUsername(ctx context.Context, username string) (*models.User, error)
 }

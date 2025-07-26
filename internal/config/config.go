@@ -11,6 +11,7 @@ type Config struct {
 	RedisHost        string
 	RedisPort        string
 	RedisPassword    string
+	JWTToken         string
 	PostgresHost     string
 	PostgresPort     string
 	PostgresUser     string
@@ -43,6 +44,7 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return &Config{
+		JWTToken:         getEnv("JWT_TOKEN", "A5S8D45W8DA4"),
 		RedisHost:        getEnv("REDIS_HOST", "localhost"),
 		RedisPort:        getEnv("REDIS_PORT", "6379"),
 		RedisPassword:    getEnv("REDIS_PASSWORD", ""),

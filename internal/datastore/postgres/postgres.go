@@ -9,7 +9,7 @@ import (
 
 	"github.com/RogueAlmond70/code-review-challenge/internal/config"
 	"github.com/RogueAlmond70/code-review-challenge/internal/config/metrics"
-	"github.com/RogueAlmond70/code-review-challenge/internal/datastore"
+	"github.com/RogueAlmond70/code-review-challenge/services"
 	"github.com/RogueAlmond70/code-review-challenge/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
@@ -18,7 +18,7 @@ import (
 var ErrParameterNotProvided = errors.New("required parameters missing")
 var ErrNilNote = errors.New("note is nil")
 var ErrNoteNoteFound = errors.New("could not find note")
-var _ datastore.DBClient = &Postgres{}
+var _ services.DBClient = &Postgres{}
 
 type Postgres struct {
 	logger *zap.Logger
