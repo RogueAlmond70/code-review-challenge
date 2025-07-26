@@ -1,8 +1,8 @@
-package database
+package datastore
 
 import (
 	"context"
-	"github.com/pushfar/code-review-challenge/types"
+	"github.com/RogueAlmond70/code-review-challenge/types"
 	"time"
 )
 
