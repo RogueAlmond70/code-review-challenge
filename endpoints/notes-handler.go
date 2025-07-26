@@ -2,9 +2,11 @@ package endpoints
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/RogueAlmond70/code-review-challenge/internal/config"
@@ -20,9 +22,41 @@ type Server struct {
 	logger *zap.Logger
 }
 
-func (s Server) GetSingleNote(ctx context.Context) gin.HandlerFunc {
+func (s Server) GetSingleNote() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+		defer cancel()
 
+		userID := userId(c)
+		if userID == "" {
+			s.logger.Warn("missing user ID in context")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+
+		noteID := c.Param("noteId")
+		if noteID == "" {
+			s.logger.Warn("missing note ID in request URL")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "note ID must be provided"})
+			return
+		}
+
+		note, err := s.DB.GetSingleNote(ctx, userID, noteID)
+		if err != nil {
+			if errors.Is(err, ErrNoteNotFound) {
+				c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "note not found"})
+				return
+			}
+
+			s.logger.Error("failed to get single note", zap.String("userID", userID), zap.String("noteID", noteID), zap.Error(err))
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve note"})
+			return
+		}
+
+		c.JSON(http.StatusOK, note)
+	}
 }
+
 func (s Server) GetNotes() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
@@ -110,37 +144,122 @@ func parsePagination(c *gin.Context) (limit int, offset int, err error) {
 	return limit, offset, nil
 }
 
-func (s Server) CreateNote(ctx context.Context) gin.HandlerFunc {
+func (s Server) CreateNote() gin.HandlerFunc {
+	const maxTitleLen = 255
+	const maxContentLen = 10000 // arbitrary sane max for content
+
 	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+		defer cancel()
+
 		var newNote types.NoteDto
-
 		if err := c.BindJSON(&newNote); err != nil {
-			fmt.Println(err)
-			c.AbortWithStatus(http.StatusBadRequest)
+			s.logger.Warn("invalid JSON body", zap.Error(err))
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 			return
 		}
 
+		userID := userId(c)
+		if userID == "" {
+			s.logger.Warn("missing user ID in context")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+
+		// Validate and sanitize title
 		title := ""
-
-		if newNote.Title != nil { // Validate (not a blank string or too long > 255 characters)
-			title = *newNote.Title // Also input sanitisation to prevent injection / XSS before saving
-		}
-
-		content := ""
-
-		if newNote.Content != nil { // Validate (not a blank string or too long >255 characters)
-			content = *newNote.Content // Also input sanitisation to prevent injection / XSS before saving
-		}
-
-		// Use context with timeouts for database operations
-		// Check for duplicates before creating a note
-		note, err := services.CreateNote(db, userId(c), title, content)
-		if err != nil {
-			fmt.Println(err) // proper error handling. Wrap errors, use logging, also metrics
-			c.AbortWithStatus(http.StatusInternalServerError)
+		if newNote.Title != nil {
+			title = strings.TrimSpace(*newNote.Title)
+			if title == "" {
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "title cannot be empty"})
+				return
+			}
+			if len(title) > maxTitleLen {
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("title length cannot exceed %d characters", maxTitleLen)})
+				return
+			}
+			title = sanitizeInput(title)
+		} else {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "title is required"})
 			return
 		}
 
-		c.JSON(http.StatusOK, note) // Return a 200 http status code on creation. Increment / Capture metrics
+		// Validate and sanitize content
+		content := ""
+		if newNote.Content != nil {
+			content = strings.TrimSpace(*newNote.Content)
+			if len(content) > maxContentLen {
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("content length cannot exceed %d characters", maxContentLen)})
+				return
+			}
+			content = sanitizeInput(content)
+		}
+
+		// Optionally, check for duplicate title for this user (simple example)
+		existingNotes, _, err := s.DB.GetNotes(ctx, userID, nil, 1, 0) // get first note, no filter
+		if err != nil {
+			s.logger.Error("failed to check for duplicate note", zap.Error(err))
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+		for _, note := range existingNotes {
+			if note.Title == title {
+				c.AbortWithStatusJSON(http.StatusConflict, gin.H{"error": "note with this title already exists"})
+				return
+			}
+		}
+
+		// Create note in DB
+		createdNote, err := s.DB.CreateNote(ctx, userID, title, content)
+		if err != nil {
+			s.logger.Error("failed to create note", zap.Error(err))
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to create note"})
+			return
+		}
+
+		// Return created note with 201 status
+		c.JSON(http.StatusCreated, createdNote)
+	}
+}
+
+// sanitizeInput is a placeholder for your actual input sanitization logic.
+// Replace this with your preferred sanitization library or logic to prevent XSS/Injection.
+func sanitizeInput(input string) string {
+	// Example: very basic escaping - consider using something like bluemonday for HTML sanitization.
+	return strings.ReplaceAll(input, "<", "&lt;")
+}
+
+func (s Server) DeleteNote() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+		defer cancel()
+
+		userID := userId(c)
+		if userID == "" {
+			s.logger.Warn("missing user ID in context")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+
+		noteID := c.Param("noteId")
+		if noteID == "" {
+			s.logger.Warn("missing note ID in request URL")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "note ID must be provided"})
+			return
+		}
+
+		err := s.DB.DeleteNote(ctx, userID, noteID)
+		if err != nil {
+			if errors.Is(err, ErrNoteNotFound) {
+				c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "note not found"})
+				return
+			}
+
+			s.logger.Error("failed to delete note", zap.String("userID", userID), zap.String("noteID", noteID), zap.Error(err))
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to delete note"})
+			return
+		}
+
+		c.Status(http.StatusNoContent) // 204 No Content
 	}
 }
