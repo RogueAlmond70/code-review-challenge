@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/RogueAlmond70/code-review-challenge/services"
+	"github.com/RogueAlmond70/code-review-challenge/types"
 	"github.com/gin-gonic/gin"
-	"github.com/pushfar/code-review-challenge/services"
-	"github.com/pushfar/code-review-challenge/types"
 )
 
 // Needs error handling, and validation. Maybe also return a bool to say if the user is present.

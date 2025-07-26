@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
+	"github.com/RogueAlmond70/code-review-challenge/endpoints"
+	"github.com/RogueAlmond70/code-review-challenge/middleware"
+	"github.com/RogueAlmond70/code-review-challenge/services"
 	"github.com/gin-gonic/gin"
-	"github.com/pushfar/code-review-challenge/endpoints"
-	"github.com/pushfar/code-review-challenge/middleware"
-	"github.com/pushfar/code-review-challenge/services"
 )
 
 func main() {

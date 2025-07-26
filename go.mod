@@ -3,7 +3,7 @@ module github.com/RogueAlmond70/code-review-challenge
 go 1.24.1
 
 require (
-	github.com/gin-gonic/gin v1.10.0
+	github.com/gin-gonic/gin v1.10.1
 	github.com/lib/pq v1.10.9
 )
 
