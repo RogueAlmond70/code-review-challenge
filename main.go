@@ -1,5 +1,20 @@
 package main
 
+/*
+- Define a database interface and refactor the functions to be methods of that interface.
+- Cleanup the endpoint code
+- Replace the basic authentication with a JWT implementation
+- Create a metrics file where I define Prometheus metrics for success and errors
+- Increment these metrics appropriately in the endpoints (for example)
+- Refine the containerisation by moving credentials to environment variables
+- Add a prometheus instance and create a docker compose
+- Update the readme file
+- Other general cleanup
+- Check the Bruno tests work, make them work if needed
+- Implement pagination for the get endpoints
+- If there's time, implement duplicate databases with a slave master config and load balancing
+*/
+
 import (
 	"fmt"
 

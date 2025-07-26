@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/RogueAlmond70/code-review-challenge/internal/config"
@@ -134,12 +135,11 @@ func (p *Postgres) GetSingleNote(ctx context.Context, userId string, noteId stri
 	return note, nil
 }
 
-// Get Notes covers functionality for GetAllNotes, GetArchivedNotes, and GetUnarchivedNotes.
-func (p *Postgres) GetNotes(ctx context.Context, userId string, archivedFilter *bool) ([]types.Note, error) {
+func (p *Postgres) GetNotes(ctx context.Context, userId string, archivedFilter *bool, limit, offset int) ([]types.Note, int, error) {
 	timer := timerMetricSelection(archivedFilter)
 	incrementTotalMetric(archivedFilter)
 
-	defer func() { // If performance is slow for some reason, it should be logged. An additional option is to define a new metric in prometheus and set up an alert.
+	defer func() {
 		elapsed := timer.ObserveDuration()
 		if elapsed > 500*time.Millisecond {
 			p.logger.Warn("slow query detected (>500ms)",
@@ -150,63 +150,72 @@ func (p *Postgres) GetNotes(ctx context.Context, userId string, archivedFilter *
 		}
 	}()
 
-	// Input validation:
 	if userId == "" {
 		incrementErrorMetric(archivedFilter)
 		p.logger.Error("userId must be provided", zap.Error(ErrParameterNotProvided))
-		return []types.Note{}, fmt.Errorf("userId must be provided: %w", ErrParameterNotProvided)
+		return nil, 0, fmt.Errorf("userId must be provided: %w", ErrParameterNotProvided)
 	}
 
-	baseQuery := `
-	SELECT id, title, content, archived
-	FROM notes
-	WHERE user_id = $1`
-
+	// Build dynamic WHERE clause
+	whereClauses := []string{"user_id = $1"}
 	args := []interface{}{userId}
+	argIndex := 2
 
 	if archivedFilter != nil {
-		baseQuery += " AND archived = $2"
+		whereClauses = append(whereClauses, fmt.Sprintf("archived = $%d", argIndex))
 		args = append(args, *archivedFilter)
+		argIndex++
 	}
 
-	rows, err := p.db.QueryContext(ctx, baseQuery, args...)
+	where := strings.Join(whereClauses, " AND ")
 
+	// ----- Total Count Query -----
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM notes WHERE %s", where)
+	var totalCount int
+	if err := p.db.QueryRowContext(ctx, countQuery, args...).Scan(&totalCount); err != nil {
+		incrementErrorMetric(archivedFilter)
+		p.logger.Error("failed to get total count", zap.Error(err))
+		return nil, 0, fmt.Errorf("failed to get total count: %w", err)
+	}
+
+	// ----- Main Query with Pagination -----
+	args = append(args, limit, offset)
+	baseQuery := fmt.Sprintf(`
+		SELECT id, title, content, archived
+		FROM notes
+		WHERE %s
+		ORDER BY id
+		LIMIT $%d OFFSET $%d`, where, argIndex, argIndex+1)
+
+	rows, err := p.db.QueryContext(ctx, baseQuery, args...)
 	if err != nil {
 		incrementErrorMetric(archivedFilter)
 		p.logger.Error("unable to run sql query", zap.Error(err))
-		return []types.Note{}, fmt.Errorf("unable to run sql query: %w", err)
+		return nil, 0, fmt.Errorf("unable to run sql query: %w", err)
 	}
 	defer rows.Close()
 
 	var notes []types.Note
-
 	for rows.Next() {
 		var note types.Note
-		err := rows.Scan(&note.ID, &note.Title, &note.Content, &note.Archived)
-		if err != nil {
+		if err := rows.Scan(&note.ID, &note.Title, &note.Content, &note.Archived); err != nil {
 			incrementErrorMetric(archivedFilter)
-			p.logger.Error("unable to scan rows",
+			p.logger.Error("unable to scan row",
 				zap.String("operation_name", "GetNotes"),
 				zap.Error(err),
 				zap.String("userId", userId))
-
-			return []types.Note{}, fmt.Errorf("unable to scan rows: %w", err)
+			return nil, 0, fmt.Errorf("unable to scan row: %w", err)
 		}
-
 		notes = append(notes, note)
-
 	}
 
 	if err := rows.Err(); err != nil {
 		incrementErrorMetric(archivedFilter)
 		p.logger.Error("row iteration error", zap.Error(err))
-		return nil, fmt.Errorf("row iteration error: %w", err)
+		return nil, 0, fmt.Errorf("row iteration error: %w", err)
 	}
 
-	if len(notes) == 0 {
-		return []types.Note{}, nil
-	}
-	return notes, nil
+	return notes, totalCount, nil
 }
 
 func (p *Postgres) CreateNote(ctx context.Context, userId, title, body string) (types.Note, error) {

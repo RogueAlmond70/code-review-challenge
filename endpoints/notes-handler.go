@@ -2,8 +2,10 @@ package endpoints
 
 import (
 	"context"
+	"fmt"
 	"net/http"
-	"strings"
+	"strconv"
+	"time"
 
 	"github.com/RogueAlmond70/code-review-challenge/internal/config"
 	"github.com/RogueAlmond70/code-review-challenge/services"
@@ -21,45 +23,91 @@ type Server struct {
 func (s Server) GetSingleNote(ctx context.Context) gin.HandlerFunc {
 
 }
-
-func (s Server) GetNotes(ctx context.Context) gin.HandlerFunc {
+func (s Server) GetNotes() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userId := userId(c)
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+		defer cancel()
 
-		// This below is a bit much. c.DefaultQuery("includeArchived", "false") == "true" is more idiomatic
-		includeArchived := strings.Compare(c.DefaultQuery("includeArchived", "false"), "true") == 0
-		includeActive := strings.Compare(c.DefaultQuery("includeActive", "true"), "true") == 0
-
-		var notes []types.Note
-		var err error
-
-		// There is no pagination - we're just returning all results at once. Bad idea (memory), also doesn't scale
-		// Database queries really need to have context.Timeout so they don't potentially hang indefinitely.
-
-		// Our GetNotes implementation makes use of an ArchiveFilter, which is a pointer to a boolean.
-		t := true
-		f := false
-
-		if includeActive && includeArchived {
-			notes, err = s.DB.GetNotes(ctx, userId, nil)
-		} else if includeArchived {
-			notes, err = s.DB.GetNotes(ctx, userId, &t)
-		} else if includeActive {
-			notes, err = s.DB.GetNotes(ctx, userId, &f)
-		} else {
-			s.logger.Warn("Nothing was included",
-				zap.String("userId", userId))
-			c.AbortWithStatus(http.StatusBadRequest)
+		userID := userId(c)
+		if userID == "" {
+			s.logger.Warn("missing user ID in context")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 			return
 		}
 
-		if err != nil {
-			s.logger.Error("unable to get notes", zap.Error(err))
-			c.AbortWithStatus(http.StatusInternalServerError)
+		includeArchived := c.DefaultQuery("includeArchived", "false") == "true"
+		includeActive := c.DefaultQuery("includeActive", "true") == "true"
+
+		// Validate filters
+		if !includeArchived && !includeActive {
+			s.logger.Warn("no notes included", zap.String("userID", userID))
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "must include at least one of active or archived notes"})
+			return
 		}
 
-		c.JSON(http.StatusOK, notes) // Return a 200 http code if successful. Increment / Capture Metrics
+		// Parse pagination parameters
+		limit, offset, err := parsePagination(c)
+		if err != nil {
+			s.logger.Warn("invalid pagination params", zap.Error(err))
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid pagination parameters"})
+			return
+		}
+
+		var archiveFilter *bool
+		switch {
+		case includeArchived && includeActive:
+			archiveFilter = nil
+		case includeArchived:
+			archiveFilter = ptr(true)
+		case includeActive:
+			archiveFilter = ptr(false)
+		}
+
+		notes, totalCount, err := s.DB.GetNotes(ctx, userID, archiveFilter, limit, offset)
+		if err != nil {
+			s.logger.Error("failed to get notes", zap.String("userID", userID), zap.Error(err))
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve notes"})
+			return
+		}
+
+		hasMore := offset+len(notes) < totalCount
+
+		c.JSON(http.StatusOK, types.NotesResponse{
+			Notes:      notes,
+			Offset:     offset,
+			Limit:      limit,
+			TotalNotes: totalCount,
+			HasMore:    hasMore,
+		})
 	}
+}
+
+// Helper to return a pointer to a bool
+func ptr(b bool) *bool {
+	return &b
+}
+
+// parsePagination parses "limit" and "offset" query parameters with sane defaults and validation.
+func parsePagination(c *gin.Context) (limit int, offset int, err error) {
+	const (
+		defaultLimit = 50
+		maxLimit     = 200
+	)
+
+	limitStr := c.DefaultQuery("limit", strconv.Itoa(defaultLimit))
+	offsetStr := c.DefaultQuery("offset", "0")
+
+	limit, err = strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 || limit > maxLimit {
+		return 0, 0, fmt.Errorf("limit must be between 1 and %d", maxLimit)
+	}
+
+	offset, err = strconv.Atoi(offsetStr)
+	if err != nil || offset < 0 {
+		return 0, 0, fmt.Errorf("offset must be non-negative")
+	}
+
+	return limit, offset, nil
 }
 
 func (s Server) CreateNote(ctx context.Context) gin.HandlerFunc {

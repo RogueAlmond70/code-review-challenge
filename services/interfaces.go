@@ -12,7 +12,7 @@ import (
 // best fits our needs. The DBClient interface has been designed with this in mind.
 type DBClient interface {
 	GetSingleNote(ctx context.Context, userId string, noteId string) (types.Note, error)
-	GetNotes(ctx context.Context, userId string, archiveFilter *bool) ([]types.Note, error)
+	GetNotes(ctx context.Context, userId string, archiveFilter *bool, limit, offset int) ([]types.Note, int, error)
 	CreateNote(ctx context.Context, userId, title, body string) (types.Note, error)
 	UpdateNote(ctx context.Context, userId, noteId string, note *types.NoteDto) (types.Note, error)
 	DeleteNote(ctx context.Context, userId, noteId string) error
