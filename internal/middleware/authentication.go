@@ -15,11 +15,11 @@ type user struct {
 }
 
 var users = []user{
-	{id: "1", name: "user1", password: "1234"}, // This needs an overhaul.
+	{id: "1", name: "user1", password: "1234"},
 	{id: "2", name: "user2", password: "2345"},
 }
 
-func BasicAuth() gin.HandlerFunc { //  This works out of the box, but we should have the ability to add, remove or edit users.
+func BasicAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username, pass, hasAuth := c.Request.BasicAuth()
 		if !hasAuth {

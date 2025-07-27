@@ -8,7 +8,7 @@ type Note struct {
 	Archived bool   `json:"archived"`
 }
 
-type NoteDto struct { // Note Data Transfer Object is a generic and useless name. Need to clarify exactly what it's for, and name it accordingly.
+type NoteDto struct {
 	Title    *string `json:"title"`
 	Content  *string `json:"content"`
 	Archived *bool   `json:"archived"`

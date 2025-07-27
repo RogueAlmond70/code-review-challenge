@@ -15,7 +15,7 @@ func singleNote(db *sql.DB, userId string, noteId string) (types.Note, error) {
         FROM notes
         WHERE user_id = $1 AND id = $2`
 
-	rows, err := db.Query(query, userId, noteId) // Handle this error please.
+	rows, err := db.Query(query, userId, noteId)
 	defer rows.Close()
 
 	if err != nil {

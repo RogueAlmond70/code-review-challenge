@@ -8,9 +8,6 @@ import (
 )
 
 type Config struct {
-	RedisHost        string
-	RedisPort        string
-	RedisPassword    string
 	JWTToken         string
 	PostgresHost     string
 	PostgresPort     string
@@ -19,17 +16,11 @@ type Config struct {
 	PostgresDB       string
 	PostgresRetry    int
 	PostgresDelay    time.Duration
-	ExploreTTL       time.Duration
 	PrometheusPort   string
-	GRPCPort         string
 	PageSize         int
 }
 
 func LoadConfig() (*Config, error) {
-	exploreTTL, err := time.ParseDuration(getEnv("EXPLORE_TTL", "30s"))
-	if err != nil {
-		return nil, fmt.Errorf("error parsing duration for TTL environment variable: %w", err)
-	}
 	postgresRetry, err := strconv.Atoi(getEnv("POSTGRES_RETRY", "10"))
 	if err != nil {
 		return nil, fmt.Errorf("error parsing POSTGRES_RETRY: %w", err)
@@ -45,9 +36,6 @@ func LoadConfig() (*Config, error) {
 
 	return &Config{
 		JWTToken:         getEnv("JWT_TOKEN", "A5S8D45W8DA4"),
-		RedisHost:        getEnv("REDIS_HOST", "localhost"),
-		RedisPort:        getEnv("REDIS_PORT", "6379"),
-		RedisPassword:    getEnv("REDIS_PASSWORD", ""),
 		PostgresHost:     getEnv("POSTGRES_HOST", "localhost"),
 		PostgresPort:     getEnv("POSTGRES_PORT", "5432"),
 		PostgresUser:     getEnv("POSTGRES_USER", "postgres"),
@@ -55,9 +43,7 @@ func LoadConfig() (*Config, error) {
 		PostgresDB:       getEnv("POSTGRES_DB", "myappdb"),
 		PostgresRetry:    postgresRetry,
 		PostgresDelay:    postgresDelay,
-		ExploreTTL:       exploreTTL,
 		PrometheusPort:   getEnv("PROMETHEUS_PORT", "2112"),
-		GRPCPort:         getEnv("GRPC_PORT", "9001"),
 		PageSize:         pageSize,
 	}, nil
 }

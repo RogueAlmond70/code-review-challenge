@@ -8,9 +8,6 @@ docker run --name code-review-challenge -e POSTGRES_PASSWORD=mysecretpassword --
 
 ## Initial database Migration
 
--- Brew install assumes you're on a mac, and it should be stated to run flyway migrate from wihthin the database-migrations
--- directory
-
 ```
 brew install flyway
 flyway migrate
@@ -68,7 +65,7 @@ curl -u your_username:your_password http://localhost:8080/notes
 
 **Create a new note in the database.**
 
-- **URL**: `/note` -- Unsure about this naming convention, I need to think of better options.
+- **URL**: `/note`
 - **Method**: `POST`
 - **Headers**:
 
