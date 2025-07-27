@@ -1,17 +1,17 @@
 meta {
-  name: getUnarchivedNotes
+  name: getAllNotes
   type: http
-  seq: 9
+  seq: 7
 }
 
 get {
-  url: http://localhost:8080/notes?includeArchived=false&includeActive=true
+  url: http://localhost:8080/notes?includeArchived=true&includeActive=true
   body: none
   auth: basic
 }
 
 params:query {
-  includeArchived: false
+  includeArchived: true
   includeActive: true
 }
 
@@ -19,3 +19,6 @@ auth:basic {
   username: user1
   password: 1234
 }
+
+
+// TODO: Review

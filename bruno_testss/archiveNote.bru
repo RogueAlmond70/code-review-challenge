@@ -1,7 +1,7 @@
 meta {
-  name: unarchiveNote
+  name: archiveNote
   type: http
-  seq: 5
+  seq: 4
 }
 
 patch {
@@ -17,6 +17,9 @@ auth:basic {
 
 body:json {
   {
-    "archived": false
+    "archived": true
   }
 }
+
+
+// TODO: Review
