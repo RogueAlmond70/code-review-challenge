@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/RogueAlmond70/code-review-challenge/services"
+	"github.com/RogueAlmond70/code-review-challenge/types"
 	"github.com/gin-gonic/gin"
-	"github.com/pushfar/code-review-challenge/services"
-	"github.com/pushfar/code-review-challenge/types"
 )
 
 func userId(c *gin.Context) string {

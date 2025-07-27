@@ -1,11 +1,11 @@
 meta {
-  name: unarchiveNote
+  name: createNote
   type: http
-  seq: 5
+  seq: 2
 }
 
-patch {
-  url: http://localhost:8080/note/5
+post {
+  url: http://localhost:8080/note
   body: json
   auth: basic
 }
@@ -17,6 +17,10 @@ auth:basic {
 
 body:json {
   {
+    "title": "New Test",
+    "content": "Something New",
     "archived": false
   }
 }
+
+// TODO: Review

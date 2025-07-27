@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/pushfar/code-review-challenge/types"
+	"github.com/RogueAlmond70/code-review-challenge/types"
 )
 
 func singleNote(db *sql.DB, userId string, noteId string) (types.Note, error) {

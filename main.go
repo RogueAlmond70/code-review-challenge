@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
+	"github.com/RogueAlmond70/code-review-challenge/endpoints"
+	"github.com/RogueAlmond70/code-review-challenge/internal/middleware"
+	"github.com/RogueAlmond70/code-review-challenge/services"
 	"github.com/gin-gonic/gin"
-	"github.com/pushfar/code-review-challenge/endpoints"
-	"github.com/pushfar/code-review-challenge/middleware"
-	"github.com/pushfar/code-review-challenge/services"
 )
 
 func main() {
@@ -21,9 +21,13 @@ func main() {
 		return
 	}
 
+	userStore := services.NewUserStore(db)
+	router.POST("/register", endpoints.Register(userStore))
+	router.POST("/login", endpoints.Login(userStore))
+
 	router.GET("/notes", endpoints.GetNotes(db))
 	router.POST("/note", endpoints.CreateNote(db))
-	router.PATCH("/note/:id", endpoints.UpdateNote(db))
+	router.PATCH("/note/:id", endpoints.UpdateNote(db)) // This is incorrectly labelled as a PUT method in the README
 	router.DELETE("/note/:id", endpoints.DeleteNote(db))
 
 	router.Run("localhost:8080")

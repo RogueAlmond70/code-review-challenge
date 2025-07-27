@@ -1,11 +1,11 @@
 meta {
-  name: getNotes
+  name: deleteNote
   type: http
-  seq: 1
+  seq: 6
 }
 
-get {
-  url: http://localhost:8080/notes
+delete {
+  url: http://localhost:8080/note/5
   body: none
   auth: basic
 }
@@ -14,3 +14,6 @@ auth:basic {
   username: user1
   password: 1234
 }
+
+
+// TODO: Review
