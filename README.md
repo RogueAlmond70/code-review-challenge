@@ -24,8 +24,6 @@ bruno and easily query all the available services. You can also run CURL command
 
 Below is the list of endpoints provided by the API.
 
---
-
 ### 1. **Get All Notes**
 
 **Retrieve a list of all notes.**
@@ -102,7 +100,7 @@ curl -u your_username:your_password -X POST http://localhost:8080/note \
 
 **Update an existing note.**
 
-- **URL**: `/note/{id}` -- show a full example!!!
+- **URL**: `/note/{id}`
 - **Method**: `PUT`
 - **Headers**:
 
@@ -113,7 +111,7 @@ curl -u your_username:your_password -X POST http://localhost:8080/note \
 
   - `id` (integer) - The ID of the note to update.
 
-- **Request Body**: -- This should be consistent with the other examples and show an actual example json
+- **Request Body**:
 
   - `title` (string) - The updated title of the note (optional).
   - `content` (string) - The updated content of the note (optional).
@@ -140,11 +138,11 @@ curl -u your_username:your_password -X PUT http://localhost:8080/notes/1 \
 }
 ```
 
-### 5. **Delete a Note** -- What happened to 4?
+### 5. **Delete a Note**
 
 **Delete a note from the database.**
 
-- **URL**: `/note/{id}` -- discrepancy between this and the example. The code says note is correct
+- **URL**: `/note/{id}`
 - **Method**: `DELETE`
 - **Headers**:
 
@@ -156,5 +154,5 @@ curl -u your_username:your_password -X PUT http://localhost:8080/notes/1 \
 #### Example Request:
 
 ```bash
-curl -u your_username:your_password -X DELETE http://localhost:8080/notes/1   -- This is the wrong URL
+curl -u your_username:your_password -X DELETE http://localhost:8080/notes/1
 ```
