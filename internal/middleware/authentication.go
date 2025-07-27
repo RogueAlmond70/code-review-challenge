@@ -41,3 +41,5 @@ func BasicAuth() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// TODO: review
