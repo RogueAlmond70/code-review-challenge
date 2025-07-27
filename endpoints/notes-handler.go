@@ -10,9 +10,11 @@ import (
 	"time"
 
 	"github.com/RogueAlmond70/code-review-challenge/internal/config"
+	"github.com/RogueAlmond70/code-review-challenge/internal/datastore"
 	"github.com/RogueAlmond70/code-review-challenge/services"
 	"github.com/RogueAlmond70/code-review-challenge/types"
 	"github.com/gin-gonic/gin"
+	"github.com/microcosm-cc/bluemonday"
 	"go.uber.org/zap"
 )
 
@@ -43,7 +45,7 @@ func (s Server) GetSingleNote() gin.HandlerFunc {
 
 		note, err := s.DB.GetSingleNote(ctx, userID, noteID)
 		if err != nil {
-			if errors.Is(err, ErrNoteNotFound) {
+			if errors.Is(err, datastore.ErrNoteNoteFound) {
 				c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "note not found"})
 				return
 			}
@@ -195,7 +197,7 @@ func (s Server) CreateNote() gin.HandlerFunc {
 			content = sanitizeInput(content)
 		}
 
-		// Optionally, check for duplicate title for this user (simple example)
+		// Check for duplicate title for this user
 		existingNotes, _, err := s.DB.GetNotes(ctx, userID, nil, 1, 0) // get first note, no filter
 		if err != nil {
 			s.logger.Error("failed to check for duplicate note", zap.Error(err))
@@ -222,11 +224,12 @@ func (s Server) CreateNote() gin.HandlerFunc {
 	}
 }
 
-// sanitizeInput is a placeholder for your actual input sanitization logic.
-// Replace this with your preferred sanitization library or logic to prevent XSS/Injection.
+// sanitizeInput uses a strict HTML sanitizer to remove potentially dangerous input.
+// It prevents XSS by stripping out scripts, unsafe tags, and attributes.
 func sanitizeInput(input string) string {
-	// Example: very basic escaping - consider using something like bluemonday for HTML sanitization.
-	return strings.ReplaceAll(input, "<", "&lt;")
+	// Use bluemonday's StrictPolicy, which allows only plain text
+	policy := bluemonday.StrictPolicy()
+	return policy.Sanitize(input)
 }
 
 func (s Server) DeleteNote() gin.HandlerFunc {
@@ -250,7 +253,7 @@ func (s Server) DeleteNote() gin.HandlerFunc {
 
 		err := s.DB.DeleteNote(ctx, userID, noteID)
 		if err != nil {
-			if errors.Is(err, ErrNoteNotFound) {
+			if errors.Is(err, datastore.ErrNoteNoteFound) {
 				c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "note not found"})
 				return
 			}
